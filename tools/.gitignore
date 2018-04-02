@@ -28,3 +28,8 @@
 
 /lib/
 /common/
+
+# Kyle Howen
+libfdt.py
+libfdt_wrap.c
+_libfdt.so

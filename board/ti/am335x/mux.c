@@ -174,6 +174,7 @@ static struct module_pin_mux mii1_pin_mux[] = {
 	{OFFSET(mii1_rxd0), MODE(0) | RXACTIVE},	/* MII1_RXD0 */
 	{OFFSET(mdio_data), MODE(0) | RXACTIVE | PULLUP_EN}, /* MDIO_DATA */
 	{OFFSET(mdio_clk), MODE(0) | PULLUP_EN},	/* MDIO_CLK */
+	// {OFFSET(gpmc_be1n), MODE(7) | PULLUP_EN },    /* PHY_nRESET GPIO1-28 (K2 3/28/2018) */
 	{-1},
 };
 

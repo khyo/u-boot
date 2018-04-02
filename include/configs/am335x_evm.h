@@ -17,6 +17,7 @@
 #define __CONFIG_AM335X_EVM_H
 
 #include <configs/ti_am335x_common.h>
+// #define CONFIG_ENV_IS_NOWHERE
 
 #ifndef CONFIG_SPL_BUILD
 # define CONFIG_TIMESTAMP
@@ -76,20 +77,19 @@
 
 #define BOOT_TARGET_DEVICES(func) \
 	func(MMC, mmc, 0) \
-	func(LEGACY_MMC, legacy_mmc, 0) \
 	func(MMC, mmc, 1) \
-	func(LEGACY_MMC, legacy_mmc, 1) \
-	func(NAND, nand, 0) \
 	func(PXE, pxe, na) \
 	func(DHCP, dhcp, na)
 
 #define CONFIG_BOOTCOMMAND \
+	"gpio clear 60;"  \
 	"if test ${boot_fit} -eq 1; then "	\
 		"run update_to_fit;"	\
 	"fi;"	\
 	"run findfdt; " \
 	"run init_console; " \
 	"run envboot; " \
+	"gpio set 60;"  \
 	"run distro_bootcmd"
 
 #include <config_distro_bootcmd.h>
