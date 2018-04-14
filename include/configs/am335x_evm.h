@@ -17,7 +17,7 @@
 #define __CONFIG_AM335X_EVM_H
 
 #include <configs/ti_am335x_common.h>
-// #define CONFIG_ENV_IS_NOWHERE
+#define CONFIG_ENV_IS_NOWHERE
 
 #ifndef CONFIG_SPL_BUILD
 # define CONFIG_TIMESTAMP

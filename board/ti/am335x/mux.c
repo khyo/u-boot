@@ -158,6 +158,18 @@ static struct module_pin_mux rgmii1_pin_mux[] = {
 	{-1},
 };
 
+static struct module_pin_mux bonestackinit_pin_mux[] = {  /* (K2 3/28/2018) */
+    {OFFSET(mii1_rxerr), MODE(7) | PULLDOWN_EN },   /* MII1_RXERR PHYAD0 */
+    {OFFSET(mii1_rxclk), MODE(7) | PULLDOWN_EN},   /* MII1_RXCLK PHYAD1 */
+    {OFFSET(mii1_rxd3), MODE(7) | PULLDOWN_EN},    /* MII1_RXD3 PHYAD2 */
+    {OFFSET(mii1_col), MODE(7) | PULLUP_EN},    /* MII1_COL MODE2 */
+    {OFFSET(mii1_rxd1), MODE(7) | PULLUP_EN},    /* MII1_RXD1 MODE1 */
+    {OFFSET(mii1_rxd0), MODE(7) | PULLUP_EN},    /* MII1_RXD0 MODE0 */
+    {OFFSET(gpmc_wait0), MODE(7) | PULLUP_EN },    /* EXT_PWR_EN GPIO0-30 */
+    {OFFSET(gpmc_be1n), MODE(7) | PULLDOWN_EN },    /* PHY_nRESET GPIO1-28 */
+    {-1},
+};
+
 static struct module_pin_mux mii1_pin_mux[] = {
 	{OFFSET(mii1_rxerr), MODE(0) | RXACTIVE},	/* MII1_RXERR */
 	{OFFSET(mii1_txen), MODE(0)},			/* MII1_TXEN */
@@ -174,7 +186,7 @@ static struct module_pin_mux mii1_pin_mux[] = {
 	{OFFSET(mii1_rxd0), MODE(0) | RXACTIVE},	/* MII1_RXD0 */
 	{OFFSET(mdio_data), MODE(0) | RXACTIVE | PULLUP_EN}, /* MDIO_DATA */
 	{OFFSET(mdio_clk), MODE(0) | PULLUP_EN},	/* MDIO_CLK */
-	// {OFFSET(gpmc_be1n), MODE(7) | PULLUP_EN },    /* PHY_nRESET GPIO1-28 (K2 3/28/2018) */
+	{OFFSET(gpmc_be1n), MODE(7) |  PULLUP_EN },    /* PHY_nRESET GPIO1-28 */
 	{-1},
 };
 
@@ -339,6 +351,70 @@ static unsigned short detect_daughter_board_profile(void)
 	return (1 << (val & PROFILE_MASK));
 }
 
+#define GPIO_PHY_MODE0          2, 21
+#define GPIO_PHY_MODE1          2, 20
+#define GPIO_PHY_MODE2          3, 0
+#define GPIO_PHY_ADDR0          3, 2
+#define GPIO_PHY_ADDR1          3, 10
+#define GPIO_PHY_ADDR2          2, 18
+#define GPIO_nEXT_PWR_EN        0, 30
+#define GPIO_nBBG_PHY_RESET_CMD 1, 28
+
+#define GPIO_FLAG_PIN        0, 30
+void cmd_gpio(unsigned int ngpio, unsigned int pin, int val)
+{
+    pin = 1 << pin;
+    #define REG_OE (0x134/4)
+    #define REG_SET (0x194/4)
+    #define REG_CLR (0x190/4)
+
+    unsigned int volatile * volatile dio = 0;
+    if (ngpio == 0) {
+        dio = (unsigned int volatile * volatile)0x44E07000;
+    } else if (ngpio == 1) {
+        dio = (unsigned int volatile * volatile)0x4804C000;
+    } else if (ngpio == 2) {
+        dio = (unsigned int volatile * volatile)0x481AC000;
+    } else if (ngpio == 3) {
+        dio = (unsigned int volatile * volatile)0x481AE000;
+    } else {
+        return;
+    }
+
+    // set as output
+    dio[REG_OE] = dio[REG_OE] & ~pin;
+    // set direction
+    if (val) {
+        dio[REG_SET] = pin;
+    } else {
+        dio[REG_CLR] = pin;
+    }
+
+    return;
+}
+
+static void bonestack_init(void)
+{
+    cmd_gpio(GPIO_nEXT_PWR_EN, 1);
+    cmd_gpio(GPIO_nBBG_PHY_RESET_CMD, 0);
+
+    cmd_gpio(GPIO_PHY_MODE0, 1);
+    cmd_gpio(GPIO_PHY_MODE1, 1);
+    cmd_gpio(GPIO_PHY_MODE2, 1);
+
+    cmd_gpio(GPIO_PHY_ADDR0, 0);
+    cmd_gpio(GPIO_PHY_ADDR1, 0);
+    cmd_gpio(GPIO_PHY_ADDR2, 0);
+
+    configure_module_pin_mux(bonestackinit_pin_mux);
+
+    udelay(200);
+
+    cmd_gpio(GPIO_nBBG_PHY_RESET_CMD, 1);
+
+    udelay(2);
+}
+
 void enable_board_pin_mux(void)
 {
 	/* Do board-specific muxes. */
@@ -382,6 +458,7 @@ void enable_board_pin_mux(void)
 		configure_module_pin_mux(mmc0_pin_mux_sk_evm);
 	} else if (board_is_bone_lt()) {
 		/* Beaglebone LT pinmux */
+        bonestack_init();
 		configure_module_pin_mux(mii1_pin_mux);
 		configure_module_pin_mux(mmc0_pin_mux);
 #if defined(CONFIG_NAND) && defined(CONFIG_EMMC_BOOT)
